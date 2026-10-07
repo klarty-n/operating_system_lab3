@@ -11,6 +11,8 @@ find_package(Threads REQUIRED)
 add_executable(lab3
     main.c
     filter.c
+    matrix_io.c
+    benchmark.c
 )
 
 target_compile_definitions(lab3 PRIVATE _POSIX_C_SOURCE=200809L)
