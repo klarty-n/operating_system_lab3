@@ -1,0 +1,12 @@
+
+Matrix 3 x 3, window = 3, K = 2, workers = 2
+Pass 1:
+1 1 1
+1 1 1
+1 1 1
+Pass 2:
+1 1 1
+1 1 1
+1 1 1
+T1: 0.003580964 s; T2: 0.002507054 s
+Speedup: 1.428355; Efficiency: 0.714178
