@@ -16,8 +16,7 @@ static int compare_int64(const void *left, const void *right)
 }
 
 // matrix edge processing
-static size_t clamped_index(size_t center, size_t offset, size_t radius,
-                            size_t limit)
+static size_t clamped_index(size_t center, size_t offset, size_t radius, size_t limit)
 {
     if (offset < radius) {
         size_t distance = radius - offset;

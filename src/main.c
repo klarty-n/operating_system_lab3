@@ -2,6 +2,7 @@
 #include "benchmark.h"
 #include "matrix_io.h"
 
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,8 +12,7 @@ int main(int argc, char **argv)
 {
     size_t limit;
 
-    if (argc != 3 || strcmp(argv[1], "-t") != 0 || argv[2][0] == '-' ||
-        sscanf(argv[2], "%zu", &limit) != 1 || limit == 0) {
+    if (argc != 3 || strcmp(argv[1], "-t") != 0 || argv[2][0] == '-' || sscanf(argv[2], "%zu", &limit) != 1 || limit == 0) {
         fprintf(stderr, "Invalid input\n");
         return EXIT_FAILURE;
     }
@@ -20,15 +20,15 @@ int main(int argc, char **argv)
     size_t rows = 0;
     size_t cols = 0;
 
-    double *input = NULL;
+    int64_t *input = NULL;
     if (read_matrix(&rows, &cols, &input) != 0)
         return EXIT_FAILURE;
 
     size_t window, iterations;
 
     printf("Enter window size:\n");
-    if (scanf("%zu", &window) != 1 || window <= 0 || window > rows ||
-        window > cols || window % 2 == 0) {
+    if (scanf("%zu", &window) != 1 || window == 0 || window > rows || window > cols || 
+        window % 2 == 0 || window > SIZE_MAX / window || window * window > SIZE_MAX / sizeof(int64_t)) {
         fprintf(stderr, "Window must be odd and not larger than the matrix\n");
         free(input);
         return EXIT_FAILURE;
@@ -45,7 +45,7 @@ int main(int argc, char **argv)
     // because we can have more workers than rows, we limit the number of workers to the number of rows
     size_t worker_count = limit < rows ? limit : rows;
 
-    double *output = malloc(count * sizeof(*output));
+    int64_t *output = malloc(count * sizeof(*output));
     Worker *workers = malloc(worker_count * sizeof(*workers));
 
     if (output == NULL || workers == NULL) {
@@ -60,7 +60,7 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    FILE *output_file = fopen("output.txt", "a");
+    FILE *output_file = fopen("output.txt", "w");
     if (output_file == NULL) {
         perror("output.txt");
         free(input); free(output); free(workers);
@@ -88,7 +88,7 @@ int main(int argc, char **argv)
         fprintf(output_file, "Pass %zu:\n", pass);
         for (size_t row = 0; row < rows; ++row) {
             for (size_t col = 0; col < cols; ++col)
-                fprintf(output_file, "%.6f%c", output[row * cols + col], col + 1 == cols ? '\n' : ' ');
+                fprintf(output_file, "%" PRId64 "%c", output[row * cols + col], col + 1 == cols ? '\n' : ' ');
         }
 
         if (ferror(output_file)) {
@@ -97,7 +97,7 @@ int main(int argc, char **argv)
             break;
         }
 
-        double *temporary = input;
+        int64_t *temporary = input;
         input = output;
         output = temporary;
     }
@@ -111,11 +111,10 @@ int main(int argc, char **argv)
         } else {
             double speedup = one_worker_seconds / total_seconds;
             double efficiency = speedup / (double)worker_count;
-            fprintf(output_file, "T1: %.9f s; T%zu: %.9f s\nSpeedup: %.6f; Efficiency: %.6f\n", one_worker_seconds, worker_count, total_seconds,                  speedup, efficiency);
+            fprintf(output_file, "T1: %.9f s; T%zu: %.9f s\nSpeedup: %.6f; Efficiency: %.6f\n", one_worker_seconds, worker_count, total_seconds, speedup, efficiency);
 
             for (size_t i = 0; i < worker_count; ++i)
-                printf("Worker %zu: PID=%ld TID=%ld\n",
-                       i + 1, (long)getpid(), (long)workers[i].tid);
+                printf("Worker %zu: PID=%ld TID=%ld\n", i + 1, (long)getpid(), (long)workers[i].tid);
         }
         if (ferror(output_file)) {
             perror("writing output.txt");
