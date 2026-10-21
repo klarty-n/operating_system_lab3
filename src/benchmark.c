@@ -11,6 +11,7 @@ static double seconds_between(struct timespec start, struct timespec end)
            (double)(end.tv_nsec - start.tv_nsec) / 1000000000.0;
 }
 
+// mesures one pass of the filter with the given workers and adds the time to total_seconds
 int run_timed_pass(Worker *workers, size_t worker_count, double *total_seconds)
 {
     struct timespec start, end;
@@ -18,8 +19,10 @@ int run_timed_pass(Worker *workers, size_t worker_count, double *total_seconds)
         perror("clock_gettime start");
         return -1;
     }
+
     if (filter_pass(workers, worker_count) != 0)
         return -1;
+
     if (clock_gettime(CLOCK_MONOTONIC, &end) != 0) {
         perror("clock_gettime end");
         return -1;
@@ -28,20 +31,22 @@ int run_timed_pass(Worker *workers, size_t worker_count, double *total_seconds)
     return 0;
 }
 
-int measure_one_worker(const double *input, double *output, size_t rows,
+// measures one worker filtering the entire input and returns the total time in seconds (for report)
+int measure_one_worker(const int64_t *input, int64_t *output, size_t rows,
                        size_t cols, size_t window, size_t iterations,
                        double *seconds)
 {
     size_t count = rows * cols;
-    double *copy = malloc(count * sizeof(*copy));
+    int64_t *copy = malloc(count * sizeof(*copy));
     if (copy == NULL) {
-        perror("malloc baseline copy");
+        perror("malloc copy");
         return -1;
     }
     memcpy(copy, input, count * sizeof(*copy));
 
-    double *source = copy;
-    double *target = output;
+    // read from copy and write to output, then swap them for the next iteration
+    int64_t *source = copy;
+    int64_t *target = output;
     *seconds = 0.0;
     int failed = 0;
 
@@ -50,13 +55,15 @@ int measure_one_worker(const double *input, double *output, size_t rows,
             .input = source, .output = target, .rows = rows, .cols = cols,
             .window = window, .first_row = 0, .last_row = rows
         };
+
         if (run_timed_pass(&worker, 1, seconds) != 0) {
             failed = 1;
             break;
         }
-        double *temporary = source;
+
+        int64_t *tmp = source;
         source = target;
-        target = temporary;
+        target = tmp;
     }
     free(copy);
     return failed ? -1 : 0;
