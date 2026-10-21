@@ -1,4 +1,5 @@
 build/
+.vscode/
 *.o
 /src/lab3
 /src/output.txt
