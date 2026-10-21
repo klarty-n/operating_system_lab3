@@ -37,7 +37,7 @@ int read_matrix(size_t *rows, size_t *cols, int64_t **matrix)
     }
 
     if (fclose(file) != 0) {
-        perror("closing input.txt");
+        perror("Closing input.txt");
         failed = 1;
     }
     if (failed) {
