@@ -2,11 +2,12 @@
 #define FILTER_H
 
 #include <stddef.h>
+#include <stdint.h>
 #include <sys/types.h>
 
 typedef struct {
-    const double *input;
-    double *output;
+    const int64_t *input;
+    int64_t *output;
     size_t rows;
     size_t cols;
     size_t window;
